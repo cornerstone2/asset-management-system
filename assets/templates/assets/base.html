@@ -1,44 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Asset Management{% endblock %}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
-        header { background: #0f172a; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        nav a { color: #e2e8f0; margin-left: 1rem; text-decoration: none; }
-        main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-        .card { background: white; border-radius: 10px; padding: 1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { border-bottom: 1px solid #e5e7eb; padding: 0.8rem; text-align: left; }
-        .btn { display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 0.55rem 1rem; border-radius: 6px; border: none; cursor: pointer; }
-        .btn.secondary { background: #64748b; }
-        .btn.danger { background: #dc2626; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
-        .metric { background: #eff6ff; border-left: 5px solid #2563eb; padding: 1rem; border-radius: 8px; }
-        .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        form { display: grid; gap: 0.8rem; }
-        label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
-        input, select, textarea { width: 100%; padding: 0.65rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-    </style>
-</head>
-<body>
-    <header>
-        <h2>AssetFlow</h2>
-        <nav>
-            <a href="{% url 'dashboard' %}">Dashboard</a>
-            <a href="{% url 'asset-list' %}">Assets</a>
-            <a href="{% url 'admin:index' %}">Admin</a>
-            {% if user.is_authenticated %}
-                <a href="{% url 'logout' %}">Logout</a>
-            {% else %}
-                <a href="{% url 'login' %}">Login</a>
-            {% endif %}
-        </nav>
-    </header>
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-</body>
-</html>
+from datetime import timedelta
+
+from django.conf import settings
+from django.core.management.base import BaseCommand
+from django.core.mail import send_mail
+from django.utils import timezone
+
+from assets.models import Asset
+
+
+class Command(BaseCommand):
+    help = "Send maintenance and warranty reminders for assets due soon."
+
+    def handle(self, *args, **options):
+        today = timezone.now().date()
+        due_assets = Asset.objects.filter(
+            maintenance_schedule__next_maintenance_date__isnull=False,
+            maintenance_schedule__next_maintenance_date__lte=today + timedelta(days=30),
+        ).select_related("maintenance_schedule")
+
+        sent = 0
+        for asset in due_assets:
+            if not settings.DEFAULT_FROM_EMAIL:
+                continue
+            subject = f"Asset maintenance reminder: {asset.asset_tag}"
+            message = (
+                f"Asset {asset.name} ({asset.asset_tag}) is due for maintenance on "
+                f"{asset.maintenance_schedule.next_maintenance_date}. "
+                f"Current status: {asset.get_status_display()}."
+            )
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [settings.DEFAULT_FROM_EMAIL], fail_silently=True)
+            sent += 1
+
+        warranty_assets = Asset.objects.filter(
+            warranty_end__isnull=False,
+            warranty_end__lte=today + timedelta(days=90),
+        )
+        for asset in warranty_assets:
+            subject = f"Warranty expiration reminder: {asset.asset_tag}"
+            message = (
+                f"The warranty for {asset.name} ({asset.asset_tag}) expires on {asset.warranty_end}. "
+                f"Please review service plans and maintenance scheduling."
+            )
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [settings.DEFAULT_FROM_EMAIL], fail_silently=True)
+            sent += 1
+
+        self.stdout.write(self.style.SUCCESS(f"Maintenance reminders processed: {sent} notifications."))

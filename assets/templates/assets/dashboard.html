@@ -1,58 +1,150 @@
-{% extends 'assets/base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Asset Management{% endblock %}</title>
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --nav: #0f172a;
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --warning: #d97706;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+        }
 
-{% block title %}Dashboard{% endblock %}
-
-{% block content %}
-<div class="card">
-    <h1>Operations Dashboard</h1>
-    <div class="grid" style="margin-top: 1.5rem;">
-        <div class="metric">
-            <strong>Total Assets</strong>
-            <p>{{ total_assets }}</p>
-        </div>
-        <div class="metric">
-            <strong>Available</strong>
-            <p>{{ available_assets }}</p>
-        </div>
-        <div class="metric">
-            <strong>Assigned</strong>
-            <p>{{ assigned_assets }}</p>
-        </div>
-        <div class="metric">
-            <strong>Maintenance</strong>
-            <p>{{ maintenance_assets }}</p>
-        </div>
-    </div>
-</div>
-
-<div class="card" style="margin-top: 2rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h2>Recently Added Assets</h2>
-        <a class="btn" href="{% url 'asset-create' %}">Add Asset</a>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th>Asset</th>
-                <th>Tag</th>
-                <th>Category</th>
-                <th>Location</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for asset in recent_assets %}
-            <tr>
-                <td><a href="{% url 'asset-detail' asset.pk %}">{{ asset.name }}</a></td>
-                <td>{{ asset.asset_tag }}</td>
-                <td>{{ asset.category }}</td>
-                <td>{{ asset.location }}</td>
-                <td>{{ asset.get_status_display }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5">No assets found.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+        }
+        header {
+            background: var(--nav);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        nav { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+        nav a {
+            color: #e2e8f0;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem 2rem;
+        }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 0.8rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn.secondary { background: var(--secondary); }
+        .btn.danger { background: var(--danger); }
+        .btn.success { background: var(--success); }
+        .btn.warning { background: var(--warning); }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        .metric {
+            background: #eff6ff;
+            border-left: 5px solid var(--primary);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .metric.warning { background: #fff7ed; border-left-color: var(--warning); }
+        .metric.success { background: #ecfdf5; border-left-color: var(--success); }
+        .metric.danger { background: #fef2f2; border-left-color: var(--danger); }
+        .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        form { display: grid; gap: 0.8rem; }
+        label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+        input, select, textarea {
+            width: 100%;
+            padding: 0.65rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .status-chip {
+            display: inline-block;
+            padding: 0.4rem 0.6rem;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0f172a;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .alert {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a5b00;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 640px) {
+            header { padding: 0.75rem 1rem; }
+            nav { width: 100%; }
+            nav a { margin-right: 0.5rem; }
+            th, td { font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h2>AssetFlow</h2>
+        <nav>
+            <a href="{% url 'dashboard' %}">Dashboard</a>
+            <a href="{% url 'asset-list' %}">Assets</a>
+            <a href="{% url 'admin:index' %}">Admin</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+            {% endif %}
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

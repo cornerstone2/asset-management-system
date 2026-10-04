@@ -1,119 +1,122 @@
-from rest_framework import filters, serializers, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
+from datetime import timedelta
+from pathlib import Path
+import os
 
-from assets.models import Asset, AssetCategory, Location, MaintenanceRecord
+BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-asset-dev-key-change-me-in-production")
+DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "* ").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
 
-class AssetCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AssetCategory
-        fields = "__all__"
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "assets",
+    "api",
+]
 
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
 
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Location
-        fields = "__all__"
+ROOT_URLCONF = "asset_management.urls"
 
-
-class MaintenanceRecordSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MaintenanceRecord
-        fields = "__all__"
-
-
-class AssetSerializer(serializers.ModelSerializer):
-    category = AssetCategorySerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(source="category", queryset=AssetCategory.objects.all(), write_only=True)
-    location = LocationSerializer(read_only=True)
-    location_id = serializers.PrimaryKeyRelatedField(source="location", queryset=Location.objects.all(), write_only=True)
-
-    class Meta:
-        model = Asset
-        fields = [
-            "id",
-            "name",
-            "asset_tag",
-            "serial_number",
-            "manufacturer",
-            "model",
-            "category",
-            "category_id",
-            "location",
-            "location_id",
-            "status",
-            "condition",
-            "purchase_date",
-            "purchase_cost",
-            "warranty_end",
-            "notes",
-            "assigned_to",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at", "assigned_to"]
-
-
-class AssetViewSet(viewsets.ModelViewSet):
-    queryset = Asset.objects.select_related("category", "location", "assigned_to").all()
-    serializer_class = AssetSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "asset_tag", "serial_number", "manufacturer", "model"]
-    ordering_fields = ["name", "created_at", "purchase_date", "status"]
-
-
-class AssetCategoryViewSet(viewsets.ModelViewSet):
-    queryset = AssetCategory.objects.all()
-    serializer_class = AssetCategorySerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "description"]
-    ordering_fields = ["name"]
-
-
-class LocationViewSet(viewsets.ModelViewSet):
-    queryset = Location.objects.all()
-    serializer_class = LocationSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "code"]
-    ordering_fields = ["name"]
-
-
-class MaintenanceRecordViewSet(viewsets.ModelViewSet):
-    queryset = MaintenanceRecord.objects.select_related("asset").all()
-    serializer_class = MaintenanceRecordSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["description", "maintenance_type", "performed_by"]
-    ordering_fields = ["completed_date", "created_at"]
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def asset_summary(request):
-    total_assets = Asset.objects.count()
-    available = Asset.objects.filter(status="available").count()
-    assigned = Asset.objects.filter(status="assigned").count()
-    maintenance = Asset.objects.filter(status="maintenance").count()
-    retired = Asset.objects.filter(status="retired").count()
-    disposed = Asset.objects.filter(status="disposed").count()
-
-    payload = {
-        "total_assets": total_assets,
-        "available_assets": available,
-        "assigned_assets": assigned,
-        "maintenance_assets": maintenance,
-        "retired_assets": retired,
-        "disposed_assets": disposed,
-        "asset_health": {
-            "healthy": available + assigned,
-            "under_watch": maintenance,
-            "retired": retired,
-            "disposed": disposed,
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
         },
+    },
+]
+
+WSGI_APPLICATION = "asset_management.wsgi.application"
+ASGI_APPLICATION = "asset_management.asgi.application"
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-    return Response(payload, status=status.HTTP_200_OK)
+}
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
+
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@assetflow.local")
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_FILTER_BACKENDS": [
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/day",
+        "user": "1000/day",
+    },
+    "SEARCH_PARAM": "search",
+    "ORDERING_PARAM": "ordering",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}

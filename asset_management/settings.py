@@ -1,108 +1,95 @@
-from datetime import timedelta
-from pathlib import Path
-import os
+from django.contrib import admin
+from .models import Asset, AssetAttachment, AssetAssignment, AssetCategory, AuditLog, Department, Employee, Location, MaintenanceRecord, MaintenanceSchedule
 
-BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-asset-dev-key-change-me-in-production")
-DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "* ").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
+class AssetInline(admin.TabularInline):
+    model = Asset
+    extra = 0
+    fields = ["name", "asset_tag", "status", "condition"]
 
-INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "rest_framework",
-    "assets",
-    "api",
-]
 
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-]
+class MaintenanceRecordInline(admin.TabularInline):
+    model = MaintenanceRecord
+    extra = 0
+    fields = ["maintenance_type", "status", "scheduled_date", "completed_date", "cost"]
 
-ROOT_URLCONF = "asset_management.urls"
 
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
-            ],
-        },
-    },
-]
+class AssetAttachmentInline(admin.TabularInline):
+    model = AssetAttachment
+    extra = 0
+    fields = ["name", "file", "uploaded_by"]
 
-WSGI_APPLICATION = "asset_management.wsgi.application"
-ASGI_APPLICATION = "asset_management.asgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ["name", "code", "manager"]
+    search_fields = ["name", "code"]
+    inlines = [AssetInline]
 
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
-]
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ["employee_id", "user", "department", "role", "is_active"]
+    list_filter = ["department", "is_active"]
+    search_fields = ["employee_id", "user__username"]
 
-STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ["name", "code", "department"]
+    search_fields = ["name", "code"]
 
-LOGIN_REDIRECT_URL = "dashboard"
-LOGOUT_REDIRECT_URL = "login"
 
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
-    "DEFAULT_FILTER_BACKENDS": [
-        "rest_framework.filters.SearchFilter",
-        "rest_framework.filters.OrderingFilter",
-    ],
-    "SEARCH_PARAM": "search",
-    "ORDERING_PARAM": "ordering",
-}
+class AssetCategoryAdmin(admin.ModelAdmin):
+    list_display = ["name"]
+    search_fields = ["name"]
 
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
-    "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-}
+
+class AssetAdmin(admin.ModelAdmin):
+    list_display = ["asset_tag", "name", "category", "location", "status", "condition", "assigned_to"]
+    list_filter = ["category", "location", "status", "condition"]
+    search_fields = ["name", "asset_tag", "serial_number"]
+    inlines = [MaintenanceRecordInline, AssetAttachmentInline]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+class MaintenanceRecordAdmin(admin.ModelAdmin):
+    list_display = ["asset", "maintenance_type", "status", "scheduled_date", "completed_date", "cost"]
+    list_filter = ["status", "maintenance_type", "completed_date"]
+    search_fields = ["asset__name", "description"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+class MaintenanceScheduleAdmin(admin.ModelAdmin):
+    list_display = ["asset", "maintenance_type", "frequency", "next_maintenance_date"]
+    list_filter = ["frequency"]
+    search_fields = ["asset__name"]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+class AssetAssignmentAdmin(admin.ModelAdmin):
+    list_display = ["asset", "assigned_to", "department", "assigned_from", "assigned_to_date"]
+    list_filter = ["department", "assigned_from"]
+    search_fields = ["asset__asset_tag", "assigned_to__username"]
+
+
+class AssetAttachmentAdmin(admin.ModelAdmin):
+    list_display = ["asset", "name", "uploaded_by", "uploaded_at"]
+    search_fields = ["asset__asset_tag", "name"]
+    readonly_fields = ["uploaded_at"]
+
+
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ["asset", "action", "user", "timestamp"]
+    list_filter = ["action", "timestamp"]
+    search_fields = ["asset__asset_tag", "description"]
+    readonly_fields = ["timestamp"]
+
+
+admin.site.register(Department, DepartmentAdmin)
+admin.site.register(Employee, EmployeeAdmin)
+admin.site.register(AssetCategory, AssetCategoryAdmin)
+admin.site.register(Location, LocationAdmin)
+admin.site.register(Asset, AssetAdmin)
+admin.site.register(AssetAttachment, AssetAttachmentAdmin)
+admin.site.register(MaintenanceRecord, MaintenanceRecordAdmin)
+admin.site.register(MaintenanceSchedule, MaintenanceScheduleAdmin)
+admin.site.register(AssetAssignment, AssetAssignmentAdmin)
+admin.site.register(AuditLog, AuditLogAdmin)
