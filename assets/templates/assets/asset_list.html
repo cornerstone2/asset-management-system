@@ -1,0 +1,56 @@
+{% extends 'assets/base.html' %}
+
+{% block title %}Asset Inventory{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>Asset Inventory</h1>
+        <a class="btn" href="{% url 'asset-create' %}">Add Asset</a>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Tag</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Condition</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asset in object_list %}
+            <tr>
+                <td><a href="{% url 'asset-detail' asset.pk %}">{{ asset.name }}</a></td>
+                <td>{{ asset.asset_tag }}</td>
+                <td>{{ asset.category }}</td>
+                <td>{{ asset.location }}</td>
+                <td>{{ asset.get_status_display }}</td>
+                <td>{{ asset.get_condition_display }}</td>
+                <td class="actions">
+                    <a class="btn secondary" href="{% url 'asset-update' asset.pk %}">Edit</a>
+                    <a class="btn danger" href="{% url 'asset-delete' asset.pk %}">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">No assets found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if is_paginated %}
+    <div style="margin-top: 1rem;">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
