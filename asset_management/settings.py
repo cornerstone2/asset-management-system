@@ -1,10 +1,12 @@
+from datetime import timedelta
 from pathlib import Path
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-asset-dev-key-change-me-in-production"
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-asset-dev-key-change-me-in-production")
+DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "* ").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
