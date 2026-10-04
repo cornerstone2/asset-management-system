@@ -1,6 +1,7 @@
-from rest_framework import filters, serializers, viewsets
+from rest_framework import filters, serializers, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.response import Response
 
 from assets.models import Asset, AssetCategory, Location, MaintenanceRecord
 
@@ -89,3 +90,30 @@ class MaintenanceRecordViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["description", "maintenance_type", "performed_by"]
     ordering_fields = ["completed_date", "created_at"]
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def asset_summary(request):
+    total_assets = Asset.objects.count()
+    available = Asset.objects.filter(status="available").count()
+    assigned = Asset.objects.filter(status="assigned").count()
+    maintenance = Asset.objects.filter(status="maintenance").count()
+    retired = Asset.objects.filter(status="retired").count()
+    disposed = Asset.objects.filter(status="disposed").count()
+
+    payload = {
+        "total_assets": total_assets,
+        "available_assets": available,
+        "assigned_assets": assigned,
+        "maintenance_assets": maintenance,
+        "retired_assets": retired,
+        "disposed_assets": disposed,
+        "asset_health": {
+            "healthy": available + assigned,
+            "under_watch": maintenance,
+            "retired": retired,
+            "disposed": disposed,
+        },
+    }
+    return Response(payload, status=status.HTTP_200_OK)
