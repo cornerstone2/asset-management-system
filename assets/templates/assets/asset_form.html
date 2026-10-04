@@ -1,0 +1,39 @@
+{% extends 'assets/base.html' %}
+
+{% block title %}{{ asset.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>{{ asset.name }}</h1>
+    <div class="actions" style="margin-bottom: 1rem;">
+        <a class="btn secondary" href="{% url 'asset-update' asset.pk %}">Edit</a>
+        <a class="btn danger" href="{% url 'asset-delete' asset.pk %}">Delete</a>
+    </div>
+
+    <p><strong>Asset Tag:</strong> {{ asset.asset_tag }}</p>
+    <p><strong>Category:</strong> {{ asset.category }}</p>
+    <p><strong>Location:</strong> {{ asset.location }}</p>
+    <p><strong>Status:</strong> {{ asset.get_status_display }}</p>
+    <p><strong>Condition:</strong> {{ asset.get_condition_display }}</p>
+    <p><strong>Manufacturer:</strong> {{ asset.manufacturer }}</p>
+    <p><strong>Model:</strong> {{ asset.model }}</p>
+    <p><strong>Serial Number:</strong> {{ asset.serial_number }}</p>
+    <p><strong>Purchase Date:</strong> {{ asset.purchase_date }}</p>
+    <p><strong>Purchase Cost:</strong> ${{ asset.purchase_cost }}</p>
+    <p><strong>Warranty End:</strong> {{ asset.warranty_end }}</p>
+    <p><strong>Notes:</strong> {{ asset.notes|default:"No additional notes." }}</p>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h2>Maintenance History</h2>
+    {% if maintenance_records %}
+    <ul>
+        {% for record in maintenance_records %}
+        <li><strong>{{ record.completed_date|default:record.scheduled_date }}</strong> - {{ record.maintenance_type }}: {{ record.description }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No maintenance records found.</p>
+    {% endif %}
+</div>
+{% endblock %}
