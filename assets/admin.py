@@ -1,23 +1,34 @@
 from django.contrib import admin
-from .models import Asset, AssetCategory, Location, MaintenanceRecord, MaintenanceSchedule, AssetAssignment, Department, Employee, AuditLog
+from .models import (
+    Asset,
+    AssetAssignment,
+    AssetCategory,
+    AuditLog,
+    Department,
+    Employee,
+    Location,
+    MaintenanceRecord,
+    MaintenanceSchedule,
+)
 
 
-class AssetInline(admin.TabularInline):
-    model = Asset
-    extra = 0
-    fields = ["name", "asset_tag", "status", "condition"]
-
-
-class MaintenanceRecordInline(admin.TabularInline):
+class MaintenanceInline(admin.TabularInline):
     model = MaintenanceRecord
     extra = 0
     fields = ["maintenance_type", "status", "scheduled_date", "completed_date", "cost"]
 
 
+class AssetAdmin(admin.ModelAdmin):
+    list_display = ["asset_tag", "name", "category", "location", "status", "condition", "assigned_to"]
+    list_filter = ["category", "location", "status", "condition"]
+    search_fields = ["name", "asset_tag", "serial_number", "qr_code"]
+    inlines = [MaintenanceInline]
+    readonly_fields = ["created_at", "updated_at"]
+
+
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ["name", "code", "manager"]
     search_fields = ["name", "code"]
-    inlines = [AssetInline]
 
 
 class EmployeeAdmin(admin.ModelAdmin):
@@ -26,55 +37,32 @@ class EmployeeAdmin(admin.ModelAdmin):
     search_fields = ["employee_id", "user__username"]
 
 
-class LocationAdmin(admin.ModelAdmin):
-    list_display = ["name", "code", "department"]
-    search_fields = ["name", "code"]
-
-
-class AssetCategoryAdmin(admin.ModelAdmin):
-    list_display = ["name"]
-    search_fields = ["name"]
-
-
-class AssetAdmin(admin.ModelAdmin):
-    list_display = ["asset_tag", "name", "category", "location", "status", "condition", "assigned_to"]
-    list_filter = ["category", "location", "status", "condition"]
-    search_fields = ["name", "asset_tag", "serial_number"]
-    inlines = [MaintenanceRecordInline]
-    readonly_fields = ["created_at", "updated_at"]
-
-
 class MaintenanceRecordAdmin(admin.ModelAdmin):
     list_display = ["asset", "maintenance_type", "status", "scheduled_date", "completed_date", "cost"]
-    list_filter = ["status", "maintenance_type", "completed_date"]
+    list_filter = ["status", "maintenance_type"]
     search_fields = ["asset__name", "description"]
-    readonly_fields = ["created_at", "updated_at"]
 
 
 class MaintenanceScheduleAdmin(admin.ModelAdmin):
     list_display = ["asset", "maintenance_type", "frequency", "next_maintenance_date"]
     list_filter = ["frequency"]
-    search_fields = ["asset__name"]
-    readonly_fields = ["created_at", "updated_at"]
 
 
 class AssetAssignmentAdmin(admin.ModelAdmin):
     list_display = ["asset", "assigned_to", "department", "assigned_from", "assigned_to_date"]
-    list_filter = ["department", "assigned_from"]
-    search_fields = ["asset__asset_tag", "assigned_to__username"]
+    list_filter = ["department"]
 
 
 class AuditLogAdmin(admin.ModelAdmin):
     list_display = ["asset", "action", "user", "timestamp"]
-    list_filter = ["action", "timestamp"]
     search_fields = ["asset__asset_tag", "description"]
     readonly_fields = ["timestamp"]
 
 
 admin.site.register(Department, DepartmentAdmin)
 admin.site.register(Employee, EmployeeAdmin)
-admin.site.register(AssetCategory, AssetCategoryAdmin)
-admin.site.register(Location, LocationAdmin)
+admin.site.register(AssetCategory)
+admin.site.register(Location)
 admin.site.register(Asset, AssetAdmin)
 admin.site.register(MaintenanceRecord, MaintenanceRecordAdmin)
 admin.site.register(MaintenanceSchedule, MaintenanceScheduleAdmin)

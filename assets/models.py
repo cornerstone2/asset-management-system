@@ -1,8 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from decimal import Decimal
-from datetime import timedelta
 from django.utils import timezone
 
 User = get_user_model()
@@ -34,7 +32,7 @@ class Employee(models.Model):
         ordering = ["employee_id"]
 
     def __str__(self):
-        return f"{self.user.get_full_name()} ({self.employee_id})"
+        return f"{self.user.get_full_name() or self.user.username} ({self.employee_id})"
 
 
 class AssetCategory(models.Model):
@@ -114,24 +112,20 @@ class Asset(models.Model):
         return reverse("asset-detail", kwargs={"pk": self.pk})
 
     def calculate_depreciation(self):
-        """Calculate straight-line depreciation."""
         if not self.purchase_date or not self.purchase_cost:
             return 0
-        
         depreciable_amount = self.purchase_cost - self.salvage_value
+        if self.useful_life_years <= 0:
+            return 0
         annual_depreciation = depreciable_amount / self.useful_life_years
-        
-        months_owned = (timezone.now().date() - self.purchase_date).days // 30
+        months_owned = max((timezone.now().date() - self.purchase_date).days // 30, 0)
         total_depreciation = (annual_depreciation / 12) * months_owned
-        
-        return min(total_depreciation, depreciable_amount)
-    
+        return float(min(total_depreciation, depreciable_amount))
+
     def current_value(self):
-        """Calculate current book value."""
-        return max(self.purchase_cost - self.calculate_depreciation(), self.salvage_value)
-    
+        return max(float(self.purchase_cost - self.calculate_depreciation()), float(self.salvage_value))
+
     def is_warranty_valid(self):
-        """Check if warranty is still valid."""
         if not self.warranty_end:
             return False
         return self.warranty_end >= timezone.now().date()
@@ -162,9 +156,8 @@ class MaintenanceRecord(models.Model):
 
     def __str__(self):
         return f"{self.asset.name} - {self.maintenance_type}"
-    
+
     def is_overdue(self):
-        """Check if maintenance is overdue."""
         if self.status == "completed":
             return False
         if not self.scheduled_date:
@@ -195,22 +188,6 @@ class MaintenanceSchedule(models.Model):
 
     def __str__(self):
         return f"{self.asset.name} - {self.frequency}"
-    
-    def calculate_next_maintenance(self):
-        """Calculate next maintenance date based on frequency."""
-        if not self.last_maintenance_date:
-            return timezone.now().date()
-        
-        frequency_days = {
-            "daily": 1,
-            "weekly": 7,
-            "monthly": 30,
-            "quarterly": 90,
-            "semi_annual": 180,
-            "annual": 365,
-        }
-        delta = timedelta(days=frequency_days.get(self.frequency, 30))
-        return self.last_maintenance_date + delta
 
 
 class AssetAssignment(models.Model):
@@ -227,9 +204,8 @@ class AssetAssignment(models.Model):
 
     def __str__(self):
         return f"{self.asset.asset_tag} -> {self.assigned_to.username}"
-    
+
     def is_active(self):
-        """Check if assignment is currently active."""
         return self.assigned_to_date is None
 
 

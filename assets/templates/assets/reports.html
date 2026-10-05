@@ -1,0 +1,38 @@
+{% extends 'assets/base.html' %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Asset Reports</h1>
+
+    <div class="grid" style="margin-top: 1rem;">
+        <div class="metric"><strong>Total Assets</strong><p>{{ total_assets }}</p></div>
+        <div class="metric"><strong>Purchase Cost</strong><p>${{ total_purchase_cost|floatformat:2 }}</p></div>
+        <div class="metric"><strong>Current Value</strong><p>${{ total_current_value|floatformat:2 }}</p></div>
+        <div class="metric"><strong>Depreciation</strong><p>${{ total_depreciation|floatformat:2 }}</p></div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <h2>Assets by Status</h2>
+        <ul>
+            {% for item in assets_by_status %}
+            <li>{{ item.status }}: {{ item.count }}</li>
+            {% empty %}
+            <li>No status data.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <h2>Maintenance Summary</h2>
+        <ul>
+            {% for item in maintenance_summary %}
+            <li>{{ item.status }}: {{ item.count }}</li>
+            {% empty %}
+            <li>No maintenance data.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

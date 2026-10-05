@@ -1,5 +1,5 @@
 from django import forms
-from .models import Asset, MaintenanceRecord, MaintenanceSchedule, Department, Employee
+from .models import Asset, Department, Employee, MaintenanceRecord, MaintenanceSchedule
 
 
 class AssetForm(forms.ModelForm):
@@ -56,9 +56,10 @@ class MaintenanceRecordForm(forms.ModelForm):
 class MaintenanceScheduleForm(forms.ModelForm):
     class Meta:
         model = MaintenanceSchedule
-        fields = ["asset", "maintenance_type", "frequency", "last_maintenance_date"]
+        fields = ["asset", "maintenance_type", "frequency", "last_maintenance_date", "next_maintenance_date"]
         widgets = {
             "last_maintenance_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "next_maintenance_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
         }
 
 

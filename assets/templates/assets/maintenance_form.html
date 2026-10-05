@@ -1,0 +1,15 @@
+{% extends 'assets/base.html' %}
+
+{% block title %}Maintenance Form{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Schedule Maintenance</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn" type="submit">Save</button>
+        <a class="btn secondary" href="{% url 'maintenance-list' %}">Cancel</a>
+    </form>
+</div>
+{% endblock %}
